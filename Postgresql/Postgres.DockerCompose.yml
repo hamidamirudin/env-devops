@@ -1,0 +1,29 @@
+version: '3.3'
+services:
+    postgres:
+        ports:
+            - '5432:5432'
+        image: 'postgres:latest'
+        container_name: postgres-local
+        restart: always
+        networks:
+          - docker-net
+        environment: 
+          - POSTGRES_PASSWORD=Passw0rd
+          - POSTGRES_USER=postgres
+          - POSTGRES_DB=postgresdb
+          - PGDATA=/var/lib/postgresql/data/pgdata
+        volumes:
+          - vol_postgresql:/var/lib/postgresql/data
+
+networks:
+    docker-net:
+        external: 
+            name: docker-net    
+volumes:
+  vol_postgresql:
+      external: true
+ 
+
+#docker-compose -f Postgres.DockerCompose.yml up -d
+#DOCKER_HOST="ssh://root@149.28.133.89" docker-compose -f Postgres.DockerCompose.yml up -d 

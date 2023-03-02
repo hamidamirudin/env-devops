@@ -1,0 +1,17 @@
+version: '3.3'
+services:
+  prometheus:
+    container_name: prometheus
+    restart: always
+    ports:
+      - '9090:9090'
+    volumes:
+      - 'prometheus-config:/etc/prometheus'
+      # - "/Users/erlangga/Documents/DriveR/SOURCETREE/TrinityCode/env-conf/Prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+      - prometheus-data:/prometheus
+    image: prom/prometheus
+volumes:
+  prometheus-data:
+    external: true
+  prometheus-config:
+    external: true 

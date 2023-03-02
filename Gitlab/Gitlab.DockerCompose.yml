@@ -1,0 +1,86 @@
+version: '3.3'
+services:
+  gitlab:
+    image: 'gitlab/gitlab-ee:latest'
+    container_name: gitlab-ee
+    #hostname: gitlab.clientsolve.com
+    restart: always
+    ports:
+      - '80:80'
+      #- '8100:443'
+      #- '23:22'
+      #nginx 
+      # - '8080:8080'
+    networks:
+      - docker-net
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+          external_url 'http://10.24.7.6'
+          # external_url 'https://gitlab.clientsolve.com' 
+          letsencrypt['enabled'] = false
+          nginx['enable'] = true 
+          nginx['listen_https'] = false
+          nginx['listen_port'] = 80
+          # gitlab_rails['omniauth_enabled'] = true
+          # gitlab_rails['omniauth_allow_single_sign_on'] = ['google_oauth2','openid_connect'] 
+          # gitlab_rails['omniauth_sync_profile_from_provider'] = ['google_oauth2','openid_connect'] 
+          # gitlab_rails['omniauth_block_auto_created_users'] = false
+          # gitlab_rails['omniauth_auto_link_ldap_user'] = true
+          # gitlab_rails['omniauth_auto_link_user'] = ["openid_connect", "google_oauth2"]
+          # gitlab_rails['omniauth_allow_bypass_two_factor'] = ['openid_connect', 'google_oauth2']
+          # gitlab_rails['omniauth_providers'] = [
+          #       {
+          #         "name" => "google_oauth2",
+          #         "app_id" => "290931377763-efkkugfbcvg1j71ki34vao3uk6ut9oaa.apps.googleusercontent.com",
+          #         "app_secret" => "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",
+          #         "args" => { "access_type" => "offline", "approval_prompt" => "" }
+          #       },
+          #       {
+          #         name: "openid_connect",
+          #         label: "Besmart Key SSO", 
+          #         #icon: "https://avatars.githubusercontent.com/u/4921466?s=200&v=4",
+          #         icon: "https://erp.clientsolve.com/web/image/1283-90525f4a/Logo%20Besmart%20120x120.png",
+          #         args: {
+          #           name: "openid_connect",
+          #           scope: ["openid","profile","email"],
+          #           response_type: "code",
+          #           issuer: "https://keycloakpg.clientsolve.com/realms/Besmart",
+          #           discovery: true,
+          #           client_auth_method: "query",
+          #           uid_field: "preferred_username",
+          #           #send_scope_to_token_endpoint: "false",
+          #           client_options: {
+          #             identifier: "gitlab",
+          #             secret: "x4xWN6RMFV2QM0ASZSI5laTFpRySe5tw",
+          #             redirect_uri: "https://gitlab.clientsolve.com/users/auth/openid_connect/callback"
+          #           }
+          #         }
+          #       },
+          #       {
+          #         name: "gitlab",
+          #         # label: "Provider name", # optional label for login button, defaults to "GitLab.com"
+          #         app_id: "1f7c91fc7eceb43f97be77af65dec70dd283dd62a35150228ea3dcce9254501e",
+          #         app_secret: "aaa0984bd858590a2f54b07bbbe8ef682141f6e23044878350a85aeb0312c0d1",
+          #         args: { scope: "read_user" } # optional: defaults to the scopes of the application
+          #       }
+
+          #     ]
+    volumes:
+      - 'vol_gitlab_config:/etc/gitlab'
+      - 'vol_gitlab_logs:/var/log/gitlab'
+      - 'vol_gitlab_data:/var/opt/gitlab'
+    shm_size: '256m'
+volumes:
+  vol_gitlab_config:
+    external: true
+  vol_gitlab_logs:
+    external: true
+  vol_gitlab_data:
+    external: true
+networks:
+    docker-net:
+        external: 
+            name: docker-net 
+
+#docker-compose -f Gitlab.DockerCompose.yml up -d
+#DOCKER_HOST="ssh://giltab76@10.24.7.6" docker-compose -f Gitlab.DockerCompose.yml up -d 

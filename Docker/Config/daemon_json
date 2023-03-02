@@ -1,0 +1,18 @@
+
+{
+    "features": {
+      "buildkit": true
+    },
+    "insecure-registries": [
+      "34.101.211.151:8083",
+      "34.101.241.111:8083",
+      "nexus.besmart-universal.com:8097"
+    ],
+    "experimental": false,
+    "builder": {
+      "gc": {
+        "defaultKeepStorage": "20GB",
+        "enabled": true
+      }
+    }
+  }

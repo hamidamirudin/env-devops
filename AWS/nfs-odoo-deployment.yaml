@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    namespace: crm-dev
+    kompose.cmd: kompose convert -f odoo-persistent.yml
+    kompose.version: 1.26.1 (a9d05d509)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: odoo2
+  name: odoo2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: odoo2
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f odoo-persistent.yml
+        kompose.version: 1.26.1 (a9d05d509)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: odoo2
+    spec:
+      securityContext:
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        fsGroupChangePolicy: "Always"
+       
+      containers:
+        - env:
+            - name: HOST
+              value: "127.0.0.1"
+            - name: PASSWORD
+              value: odoo
+            - name: POSTGRES_DB
+              value: odoo
+            - name: POSTGRES_PASSWORD
+              value: odoo
+            - name: POSTGRES_USER
+              value: odoo
+            - name: USER
+              value: odoo
+          image: odoo:15.0
+          name: odoo2
+          ports:
+            - containerPort: 8069
+            - containerPort: 8072
+          resources: {}
+          volumeMounts:
+            - mountPath: /var/lib/odoo
+              name: vol-odoo-data
+            - mountPath: /etc/odoo
+              name: vol-odoo-config
+            - mountPath: /mnt/extra-addons
+              name: vol-odoo-addons
+          #securityContext:
+          #  allowPrivilegeEscalation: false
+        
+           
+      restartPolicy: Always
+      volumes:
+        - name: vol-odoo-data
+          persistentVolumeClaim:
+            claimName: nfs-pvc-data
+        - name: vol-odoo-config
+          persistentVolumeClaim:
+            claimName: nfs-pvc-config
+        - name: vol-odoo-addons
+          persistentVolumeClaim:
+            claimName: nfs-pvc-addons
+status: {}

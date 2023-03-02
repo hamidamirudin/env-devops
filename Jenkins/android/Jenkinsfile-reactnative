@@ -1,0 +1,218 @@
+import org.jenkinsci.plugins.pipeline.modeldefinition.Utils 
+
+def git_credentials_id = scm.userRemoteConfigs[0].credentialsId
+def git_repo = scm.userRemoteConfigs[0].url
+def git_branch = scm.branches[0].name
+
+def buildNumber = env.BUILD_NUMBER as int
+if (buildNumber > 1) milestone(buildNumber - 1)
+milestone(buildNumber)
+
+def nexus_credentials_id = 'nexus_pos'
+// def nexus_base_url = 'http://nexus.posindonesia.co.id'
+def nexus_base_url = 'http://10.24.7.10:8081'
+def nexus_deploy = 'kurlog-apk'
+def deploy_to_nexus = true
+def project_name = 'ex-rect-native-jenkins'
+
+def file_apk = 'app-debug.apk'
+def file_apk_release = 'app-release.apk'
+def file_apk_aab = 'app-release.aab'
+def file_apk_path = '/android/app/build/outputs/apk/debug' // harus diawali '/' dan tanpa diakhiri '/'
+def file_apk_path_release = '/android/app/build/outputs/apk/release' // harus diawali '/' dan tanpa diakhiri '/'
+def file_apk_path_aab = '/android/app/build/outputs/bundle/release'
+def is_repush = 0 // 0=false(perlu build ulang) 1=true(tidak build ulang)
+
+def build_release = true
+def build_debug = true
+def build_aab = true
+
+// //AUTO MERGE 
+// def dummy_urlrepo = ''
+// def branch_parent = 'development'
+// def protocol = ''
+
+node {
+    stage('Checkout') {
+
+        //CHECKOUT SCM
+        git url: "${git_repo}", branch: "${git_branch}", credentialsId: "${git_credentials_id}"
+
+        //SET ENV
+        env.ANDROID_HOME = "/usr/local/bin/android_sdk"
+        env.NODE_JS= "/opt/node/bin/"
+        // env.GRADLE= "/opt/gradle/gradle-8.0/bin"
+        env.PATH="${env.NODE_JS}:/usr/local/bin:${env.PATH}"
+        // env.M2_HOME = "/opt/maven"
+        // env.PATH="/opt/oc:${env.M2_HOME}/bin:${env.PATH}"
+    }
+
+    // stage('Merge') {
+    //     withEnv(["CREDENTIALID=${git_credentials_id}"]) {
+    //        withCredentials([[$class: 'UsernamePasswordMultiBinding',
+    //             credentialsId: "${CREDENTIALID}",
+    //             usernameVariable: 'gitlab_username', passwordVariable: 'gitlab_password']]) {
+    //             // dummy_urlrepo = git_repo.replaceAll('http://', 'http://' + nexus_username + '@' + nexus_password)
+    //             // dummy_urlrepo = git_repo.replaceAll('https://', 'https://' + nexus_username + '@' + nexus_password)
+
+    //             if (git_repo.startsWith ("https"))
+    //             {
+    //                 protocol = 'https' 
+    //             }
+    //             else 
+    //             {
+    //                 protocol = 'http' 
+    //             }
+    //             dummy_urlrepo = git_repo.replaceAll(protocol + '://', '')
+
+    //             sh """
+    //                 git remote -v 
+    //                 git config --local -l
+    //                 git config pull.ff only 
+    //             """ 
+
+    //             sh """ 
+    //                 git config --local user.name "Jenkins"
+    //                 git config --local user.email "erlangga.er@gmail.com"
+    //             """ 
+
+    //             // sh """
+    //             //     git pull ${protocol}://${gitlab_username}:${nexus_password}@${dummy_urlrepo} --set-upstream --ff-only ${git_branch} 
+    //             // """ 
+
+    //             sh """
+    //                 git pull ${protocol}://${gitlab_username}:${gitlab_password}@${dummy_urlrepo} ${branch_parent} --no-ff
+    //             """ 
+
+    //             sh """
+    //                 git push -v ${protocol}://${gitlab_username}:${gitlab_password}@${dummy_urlrepo} ${git_branch} 
+    //             """
+    //             }
+    //     }
+    // }
+
+    stage('npm install') {
+        sh 'npm install --legacy-peer-deps'
+        // sh 'chown -R jenkins:jenkins /opt/node/lib/node_modules'
+    }
+
+    stage('Install react-native-cli'){
+        sh 'npm install -g react-native-cli'  
+    }
+
+    stage('Create React Native Bundle') {
+        sh 'react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/index.android.bundle --assets-dest android/app/src/main/res/'
+    }
+
+    ////////////GRADLE/////////////////////
+    stage('Clean') {
+        //sh './gradlew clean assembleDebug assembleRelease'
+        if(is_repush == 0 ){
+            dir('android') {
+                sh './gradlew clean'
+            }
+        }
+    }
+
+    stage('Build Debug') {
+        if(is_repush == 0 && build_debug == true ){
+            dir('android') {
+                sh './gradlew assembleDebug'
+            }
+        }
+        else {
+            echo 'SKIP Build Debug'
+            Utils.markStageSkippedForConditional('Build Debug')
+        }
+    }
+
+    stage('Build Release') {
+        if(is_repush == 0 && build_release == true ){
+            // sh './gradlew assembleDebug'
+            // dir('android/app/build/generated/res/react/release/drawable-mdpi/'){
+            //     sh 'rm -f node_modules_reactnative_libraries_newappscreen_components_logo.png'
+            // }
+            
+            // delete duplicate resources
+            sh 'rm -rf ./android/app/src/main/res/drawable-*'
+            dir('android') {
+                sh './gradlew assembleRelease'
+            }
+        }
+        else {
+            echo 'SKIP Build Release'
+            Utils.markStageSkippedForConditional('Build Release')
+        }
+        
+        // script {
+        //     if (env.BRANCH_NAME.startsWith("release")) {
+        //         sh './gradlew bundleUpload'
+        //     }
+        // }
+    }
+
+    stage('Build Release AAB') {
+        if(is_repush == 0 && build_aab == true ){
+            dir('android') {
+                sh './gradlew bundleRelease'
+            }
+        }
+        else {
+            echo 'SKIP Build Release AAB'
+            Utils.markStageSkippedForConditional('Build Release AAB')
+        }
+    }
+
+    ////////////GRADLE/////////////////////
+
+    ////////////UPLOAD APK TO NEXUS ////////////
+    stage('Nexus') {
+        if (deploy_to_nexus == false ){
+            echo 'SKIP Deploying to Nexus'
+            Utils.markStageSkippedForConditional('Nexus')
+        } 
+        else {
+        withCredentials([[$class: 'UsernamePasswordMultiBinding',
+            credentialsId: "${nexus_credentials_id}",
+            usernameVariable: 'nexus_username', passwordVariable: 'nexus_password']]) {
+                if(is_repush == 0 ){
+                    sh """
+                    echo 'Uploading apk templates onto repository...'
+                    curl --fail -u ${nexus_username}:${nexus_password} --upload-file .${file_apk_path}/${file_apk} $nexus_base_url/repository/${nexus_deploy}/kurlog-apk/${project_name}/exReact-${file_apk} --create-dirs
+                    """
+                    sh """
+                    echo 'Uploading apk templates onto repository...'
+                    curl --fail -u ${nexus_username}:${nexus_password} --upload-file .${file_apk_path_release}/${file_apk_release} $nexus_base_url/repository/${nexus_deploy}/kurlog-apk/${project_name}/exReact-${file_apk_release} --create-dirs
+                    """
+                    sh """
+                    echo 'Uploading apk templates onto repository...'
+                    curl --fail -u ${nexus_username}:${nexus_password} --upload-file .${file_apk_path_aab}/${file_apk_aab} $nexus_base_url/repository/${nexus_deploy}/kurlog-apk/${project_name}/exReact-${file_apk_aab} --create-dirs
+                    """
+
+                }
+                else
+                {
+                    def str2 = file_apk_path.substring(file_apk_path.indexOf('/') +1 , file_apk_path.length())
+                    sh """
+                        mkdir -p '${str2}'
+                        chmod -R 777 "\$(pwd)${file_apk_path}"
+                    """
+                    sh """
+                        echo 'Downloading dummy APK...'
+                        pwd
+                        curl --fail -u ${nexus_username}:${nexus_password} -o ${file_apk} ${nexus_base_url}/repository/${nexus_deploy}/apk/example-react/DEV-${file_apk}
+                        pwd
+                        echo 'Download Done'
+
+                        mv ${file_apk} .${file_apk_path}/${file_apk}
+
+                        chmod -R 777 "\$(pwd)${file_apk_path}"
+                        """
+                }
+            }
+        }
+    }
+
+    ////////////UPLOAD APK TO NEXUS ////////////
+
+}

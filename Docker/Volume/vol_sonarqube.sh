@@ -1,0 +1,3 @@
+docker volume create vol_sonarqube_data
+docker volume create vol_sonarqube_extensions
+docker volume create vol_sonarqube_logs

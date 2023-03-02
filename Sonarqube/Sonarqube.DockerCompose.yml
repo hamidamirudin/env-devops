@@ -1,0 +1,36 @@
+version: "3.3"
+
+services:
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    networks:
+      - docker-net
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://192.168.56.5:5432/sonar
+      SONAR_JDBC_USERNAME: postgres
+      SONAR_JDBC_PASSWORD: Passw0rd
+      # SONAR_CORE_SERVERBASEURL: https://sonarqube.clientsolve.com
+      # SONAR_SECURITY_REALM: Besmart
+      # SONAR_KEYCLOAK_JSON: '{  "realm": "Besmart",  "auth-server-url": "https://keycloakpg.clientsolve.com/auth/",  "ssl-required": "external",  "resource": "sonarqube", "credentials": { "secret": "ZhXQzaGrSlrnwMAUnwDkrUhpZ3pGtHgR" }, "confidential-port": 0}'
+
+      #default username pass admin:admin
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    ports:
+      - "9000:9000" 
+    restart: always
+
+networks:
+    docker-net:
+        external: 
+            name: docker-net
+
+volumes:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs: 
+
+#DOCKER_HOST="ssh://root@149.28.133.89" docker-compose -f Sonarqube.DockerCompose.yml up -d 

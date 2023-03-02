@@ -1,0 +1,44 @@
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: efs-app4
+spec:
+  containers:
+    - name: app
+      image: centos
+      command: ["/bin/sh"]
+      args: ["-c", "while true; do echo $(date -u) >> /data/out; sleep 5; done"]
+      volumeMounts:
+        - name: persistent-storage
+          mountPath: /data
+        - name: nfs-pvc-addons
+          mountPath: /pvc/odoo/addons
+        - name: nfs-pvc-config
+          mountPath: /pvc/odoo/config
+        - name: nfs-pvc-data
+          mountPath: /pvc/odoo/data
+        - name: nfs-pvc-confd
+          mountPath: /pvc/nginx/confd
+        - name: nfs-pvc-certs
+          mountPath: /pvc/nginx/certs
+  volumes:
+    - name: persistent-storage
+      persistentVolumeClaim:
+        claimName: efs-claim
+    - name: nfs-pvc-addons
+      persistentVolumeClaim:
+        claimName: nfs-pvc-addons
+    - name: nfs-pvc-config
+      persistentVolumeClaim:
+        claimName: nfs-pvc-config
+    - name: nfs-pvc-data
+      persistentVolumeClaim:
+        claimName: nfs-pvc-data
+    - name: nfs-pvc-confd
+      persistentVolumeClaim:
+        claimName: nfs-pvc-confd
+    - name: nfs-pvc-certs
+      persistentVolumeClaim:
+        claimName: nfs-pvc-certs

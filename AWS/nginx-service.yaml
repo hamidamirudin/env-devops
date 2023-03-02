@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service 
+spec: 
+  allocateLoadBalancerNodePorts: true
+  # clusterIP: 10.36.15.89
+  # clusterIPs:
+  # - 10.36.15.89
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: 80-to-80-tcp
+    # nodePort: 31551
+    port: 80
+    protocol: TCP
+    targetPort: http-web-svc
+  - name: 443-to-443-tcp
+    # nodePort: 30725
+    port: 443
+    protocol: TCP
+    targetPort: https-web-svc
+  - name: 8072-to-8072-tcp
+    # nodePort: 30419
+    port: 8072
+    protocol: TCP
+    targetPort: lp-web-svc
+  selector:
+    app.kubernetes.io/name: nginx
+  sessionAffinity: None
+  type: LoadBalancer
+

@@ -1,0 +1,172 @@
+import org.jenkinsci.plugins.pipeline.modeldefinition.Utils 
+
+def git_credentials_id = scm.userRemoteConfigs[0].credentialsId
+def git_repo = scm.userRemoteConfigs[0].url
+def git_branch = scm.branches[0].name
+
+def buildNumber = env.BUILD_NUMBER as int
+if (buildNumber > 1) milestone(buildNumber - 1)
+milestone(buildNumber)
+
+def nexus_credentials_id = 'nexus_pos'
+// def nexus_base_url = 'http://nexus.posindonesia.co.id'
+def nexus_base_url = 'http://10.24.7.10:8081'
+def nexus_deploy = 'kurlog-apk'
+def deploy_to_nexus = true
+def project_name = 'app-flutter-example'
+
+def file_apk = 'app-debug.apk'
+def file_apk_release = 'app-release.apk'
+def file_apk_aab = 'app-release.aab'
+def file_apk_path = '/build/app/outputs/apk/debug' // harus diawali '/' dan tanpa diakhiri '/'
+def file_apk_path_release = '/build/app/outputs/apk/release' // harus diawali '/' dan tanpa diakhiri '/'
+def file_apk_path_aab = '/build/app/outputs/bundle/release' 
+def is_repush = 0 // 0=false(perlu build ulang) 1=true(tidak build ulang)
+
+def build_release = true
+def build_debug = true
+def build_aab = true
+
+// //AUTO MERGE 
+// def dummy_urlrepo = ''
+// def branch_parent = 'development'
+// def protocol = ''
+
+node {
+    stage('Checkout') {
+
+        //CHECKOUT SCM
+        git url: "${git_repo}", branch: "${git_branch}", credentialsId: "${git_credentials_id}"
+
+        //SET ENV
+        env.ANDROID_HOME = "/usr/local/bin/android_sdk"
+        env.FLUTTER_SDK = "/opt/flutter/bin"
+        env.PATH="${env.FLUTTER_SDK}:/usr/local/bin:${env.PATH}"
+        // env.M2_HOME = "/opt/maven"
+        // env.PATH="/opt/oc:${env.M2_HOME}/bin:${env.PATH}"
+    }
+
+    // stage('Merge') {
+    //     withEnv(["CREDENTIALID=${git_credentials_id}"]) {
+    //        withCredentials([[$class: 'UsernamePasswordMultiBinding',
+    //             credentialsId: "${CREDENTIALID}",
+    //             usernameVariable: 'gitlab_username', passwordVariable: 'gitlab_password']]) {
+    //             // dummy_urlrepo = git_repo.replaceAll('http://', 'http://' + nexus_username + '@' + nexus_password)
+    //             // dummy_urlrepo = git_repo.replaceAll('https://', 'https://' + nexus_username + '@' + nexus_password)
+
+    //             if (git_repo.startsWith ("https"))
+    //             {
+    //                 protocol = 'https' 
+    //             }
+    //             else 
+    //             {
+    //                 protocol = 'http' 
+    //             }
+    //             dummy_urlrepo = git_repo.replaceAll(protocol + '://', '')
+
+    //             sh """
+    //                 git remote -v 
+    //                 git config --local -l
+    //                 git config pull.ff only 
+    //             """ 
+
+    //             sh """ 
+    //                 git config --local user.name "Jenkins"
+    //                 git config --local user.email "erlangga.er@gmail.com"
+    //             """ 
+
+    //             // sh """
+    //             //     git pull ${protocol}://${gitlab_username}:${nexus_password}@${dummy_urlrepo} --set-upstream --ff-only ${git_branch} 
+    //             // """ 
+
+    //             sh """
+    //                 git pull ${protocol}://${gitlab_username}:${gitlab_password}@${dummy_urlrepo} ${branch_parent} --no-ff
+    //             """ 
+
+    //             sh """
+    //                 git push -v ${protocol}://${gitlab_username}:${gitlab_password}@${dummy_urlrepo} ${git_branch} 
+    //             """
+    //             }
+    //     }
+    // }
+
+    ////////////GRADLE/////////////////////
+    // stage('Clean') {
+    //     //sh './gradlew clean assembleDebug assembleRelease'
+    //     if(is_repush == 0 ){
+    //         sh './gradlew clean'
+    //     }
+    // }
+
+    stage('Build APK Debug') {
+        if(is_repush == 0 && build_debug == true ){
+            // sh 'flutter build apk --split-per-abi'  // untuk split per ABI
+            sh 'flutter build apk --debug'
+        }
+    }
+    stage('Build APK Release') {
+        if(is_repush == 0 && build_release == true ){
+            // sh 'flutter build apk --split-per-abi'  // untuk split per ABI
+            sh 'flutter build apk'
+        }
+        else {
+            echo 'SKIP Build Debug'
+            Utils.markStageSkippedForConditional('Build APK Release')
+        }
+    }
+
+    stage('Build App Bundle') {
+        if(is_repush == 0 && build_aab == true ){
+            sh 'flutter build appbundle' // Dapat dijalankan di dalam project ionic
+        }
+        else {
+            echo 'SKIP Build Debug'
+            Utils.markStageSkippedForConditional('Build App Bundle')
+        }
+    }
+
+    ////////////GRADLE/////////////////////
+
+    ////////////UPLOAD APK TO NEXUS ////////////
+    stage('Nexus') {
+        withCredentials([[$class: 'UsernamePasswordMultiBinding',
+            credentialsId: "${nexus_credentials_id}",
+            usernameVariable: 'nexus_username', passwordVariable: 'nexus_password']]) {
+                if(is_repush == 0 ){
+                    sh """
+                    echo 'Uploading apk templates onto repository...'
+                    curl --fail -u ${nexus_username}:${nexus_password} --upload-file .${file_apk_path}/${file_apk} $nexus_base_url/repository/${nexus_deploy}/kurlog-apk/${project_name}/exFlutter-${file_apk} --create-dirs
+                    """
+                    sh """
+                    echo 'Uploading apk templates onto repository...'
+                    curl --fail -u ${nexus_username}:${nexus_password} --upload-file .${file_apk_path_release}/${file_apk_release} $nexus_base_url/repository/${nexus_deploy}/kurlog-apk/${project_name}/exFlutter-${file_apk_release} --create-dirs
+                    """
+                    sh """
+                    echo 'Uploading apk templates onto repository...'
+                    curl --fail -u ${nexus_username}:${nexus_password} --upload-file .${file_apk_path_aab}/${file_apk_aab} $nexus_base_url/repository/${nexus_deploy}/kurlog-apk/${project_name}/exFlutter-${file_apk_aab} --create-dirs
+                    """
+                }
+                else
+                {
+                    def str2 = file_apk_path.substring(file_apk_path.indexOf('/') +1 , file_apk_path.length())
+                    sh """
+                        mkdir -p '${str2}'
+                        chmod -R 777 "\$(pwd)${file_apk_path}"
+                    """
+                    sh """
+                        echo 'Downloading dummy APK...'
+                        pwd
+                        curl --fail -u ${nexus_username}:${nexus_password} -o ${file_apk} ${nexus_base_url}/repository/${nexus_deploy}/apk/DEV-${file_apk}
+                        pwd
+                        echo 'Download Done'
+
+                        mv ${file_apk} .${file_apk_path}/${file_apk}
+
+                        chmod -R 777 "\$(pwd)${file_apk_path}"
+                        """
+                }
+        }
+    }
+    ////////////UPLOAD APK TO NEXUS ////////////
+
+}

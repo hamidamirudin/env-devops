@@ -1,0 +1,44 @@
+version: '3.3'
+services:
+    jenkins:
+        ports:
+            - '8080:8080'
+        # user: root
+        volumes:
+            - vol_jenkins:/var/jenkins_home
+            - '/var/run/docker.sock:/var/run/docker.sock'
+            - '/usr/bin/docker:/usr/bin/docker'
+            - '/usr/bin/docker-compose:/usr/bin/docker-compose'
+            - '/usr/local/bin/docker-compose:/usr/local/bin/docker-compose'
+            # - '/opt/apache-maven-3.8.6:/opt/maven'
+            # - '/opt/oc:/opt/oc'
+            # - '/opt/node:/opt/node'
+            # - '/usr/local/bin/android_sdk:/usr/local/bin/android_sdk'
+            # - '/opt/gradle/gradle-8.0:/opt/gradle/gradle-8.0'
+            # - '/opt/flutter:/opt/flutter'
+            # - '/usr/bin/az:/usr/bin/az'
+            # - '/usr/bin/python3:/usr/bin/python3'
+            # - '/bin/python3:/bin/python3'
+            # - '/usr/bin/dotnet:/usr/bin/dotnet'
+            # - '/usr/share/dotnet:/usr/share/dotnet'
+            # - '/usr/bin/host/fxr:/usr/bin/host/fxr'
+        container_name: jenkins-local
+        restart: always
+        image: 'jenkins/jenkins:latest'
+        # image: 'ariagaluh02/jenkins-az:latest'
+        #current user admin:admin
+        networks:
+          - docker-net
+
+volumes:
+    vol_jenkins:
+        external: true 
+
+networks:
+    docker-net:
+        external: 
+            name: docker-net 
+
+#docker-compose -f Jenkins.DockerCompose.yml up -d
+#DOCKER_HOST="ssh://root@149.28.133.89" docker-compose -f Jenkins.DockerCompose.yml up -d 
+

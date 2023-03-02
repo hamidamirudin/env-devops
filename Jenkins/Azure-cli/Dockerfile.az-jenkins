@@ -1,0 +1,5 @@
+FROM jenkins/jenkins:latest
+
+USER 0
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+USER jenkins

@@ -1,0 +1,3 @@
+docker volume create vol_gitlab_config
+docker volume create vol_gitlab_logs
+docker volume create vol_gitlab_data

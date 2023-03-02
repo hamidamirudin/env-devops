@@ -1,0 +1,22 @@
+version: '3.3'
+services:
+    nexus3:
+        ports:
+            - '8081:8081'
+            - '8088:8088'
+            - '8089:8089'
+        container_name: nexus-local
+        volumes:
+            - 'vol_nexus:/nexus-data'
+        environment:
+            - 'INSTALL4J_ADD_VM_PARAMS=-Xms2703m -Xmx2703m -XX:MaxDirectMemorySize=2703m -Djava.util.prefs.userRoot=/some-other-dir'
+        image: sonatype/nexus3
+        restart: always
+volumes:
+    vol_nexus:
+        external: true
+
+
+
+#docker-compose -f Keycloak.DockerCompose.yml up -d
+#DOCKER_HOST="ssh://root@149.28.133.89" docker-compose -f Nexus.DockerCompose.yml up -d 

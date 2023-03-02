@@ -1,0 +1,227 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-certs
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany 
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: efs-sc
+  # hostPath:
+  #   path: "/data/nginx/certs"
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: fs-0bcfc730c327c3754
+  # claimRef:
+  #   namespace: default
+  #   name: nfs-pvc-certs
+
+--- 
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc-certs
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  resources:
+    requests:
+      storage: 1Gi
+  volumeName: nfs-pv-certs
+
+--- 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-confd
+spec:
+  storageClassName: "efs-sc"
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  # hostPath:
+  #   path: "/data/nginx/confd"
+  # volumeMode: Filesystem
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: fs-0cfd5e6eb0f0fca47
+  persistentVolumeReclaimPolicy: Retain
+  # claimRef:
+  #   namespace: default
+  #   name: nfs-pvc-conf
+
+--- 
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc-confd
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  resources:
+    requests:
+      storage: 1Gi
+  volumeName: nfs-pv-confd
+
+
+--- 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-addons
+spec:
+  storageClassName: "efs-sc"
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  # hostPath:
+  #   path: "/data/odoo/addons"
+  # claimRef:
+  #   namespace: default
+  #   name: nfs-pvc-conf
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: fs-0fdd4e273bc5e92cd
+  persistentVolumeReclaimPolicy: Retain
+
+--- 
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc-addons
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  resources:
+    requests:
+      storage: 5Gi
+  volumeName: nfs-pv-addons
+
+
+--- 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-config
+spec:
+  storageClassName: "efs-sc"
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  # hostPath:
+  #   path: "/data/odoo/config"
+  # claimRef:
+  #   namespace: default
+  #   name: nfs-pvc-conf
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: fs-04875ecc853437e1c
+  persistentVolumeReclaimPolicy: Retain
+
+--- 
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc-config
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  resources:
+    requests:
+      storage: 1Gi
+  volumeName: nfs-pv-config
+
+
+--- 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-data
+spec:
+  storageClassName: "efs-sc"
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteMany
+  # hostPath:
+  #   path: "/data/odoo/data"
+  # claimRef:
+  #   namespace: default
+  #   name: nfs-pvc-conf
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: fs-06fb7bd2d16dab88b
+  persistentVolumeReclaimPolicy: Retain
+
+--- 
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc-data
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  resources:
+    requests:
+      storage: 100Gi
+  volumeName: nfs-pv-data
+
+--- 
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: efs-claim-pv
+spec:
+  storageClassName: "efs-sc"
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/data"
+  # csi:
+  #   driver: efs.csi.aws.com
+  #   volumeHandle: fs-0d0b9b9c31b844b72
+  persistentVolumeReclaimPolicy: Retain
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: efs-claim
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  resources:
+    requests:
+      storage: 5Gi
+
+# kubectl delete pvc nfs-pvc-certs
+# kubectl delete pvc nfs-pvc-confd
+# kubectl delete pvc nfs-pvc-addons
+# kubectl delete pvc nfs-pvc-config
+# kubectl delete pvc nfs-pvc-data
+
+# kubectl delete pv nfs-pv-certs
+# kubectl delete pv nfs-pv-confd
+# kubectl delete pv nfs-pv-addons
+# kubectl delete pv nfs-pv-config
+# kubectl delete pv nfs-pv-data

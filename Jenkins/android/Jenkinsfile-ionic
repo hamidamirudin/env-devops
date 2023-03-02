@@ -1,0 +1,133 @@
+import org.jenkinsci.plugins.pipeline.modeldefinition.Utils 
+
+def git_credentials_id = scm.userRemoteConfigs[0].credentialsId
+def git_repo = scm.userRemoteConfigs[0].url
+def git_branch = scm.branches[0].name
+
+def buildNumber = env.BUILD_NUMBER as int
+if (buildNumber > 1) milestone(buildNumber - 1)
+milestone(buildNumber)
+
+def nexus_credentials_id = 'nexus_pos'
+// def nexus_base_url = 'http://nexus.posindonesia.co.id'
+def nexus_base_url = 'http://10.24.7.10:8081'
+def nexus_deploy = 'kurlog-apk'
+def deploy_to_nexus = true
+def project_name = 'mobile-ionic-example'
+
+def file_apk = 'app-debug.apk'
+def file_apk_release = 'app-release.apk'
+def file_apk_aab = 'app-release.aab'
+def file_apk_path = '/platforms/android/app/build/outputs/apk/debug' // harus diawali '/' dan tanpa diakhiri '/'
+// def file_apk_path_release =
+def file_apk_path_aab = '/platforms/android/app/build/outputs/bundle/release' // harus diawali '/' dan tanpa diakhiri '/'
+def is_repush = 0 // 0=false(perlu build ulang) 1=true(tidak build ulang)
+
+def build_release = true
+def build_debug = true
+def build_aab = true
+
+// //AUTO MERGE 
+// def dummy_urlrepo = ''
+// def branch_parent = 'development'
+// def protocol = ''
+
+node {
+    stage('Checkout') {
+
+        //CHECKOUT SCM
+        git url: "${git_repo}", branch: "${git_branch}", credentialsId: "${git_credentials_id}"
+
+        //SET ENV
+        env.ANDROID_HOME = "/usr/local/bin/android_sdk"
+        env.PATH="/usr/local/bin:${env.PATH}"
+        // env.M2_HOME = "/opt/maven"
+        // env.PATH="/opt/oc:${env.M2_HOME}/bin:${env.PATH}"
+    }
+
+    stage('Install Requirement') {
+        sh 'npm install --legacy-peer-deps'
+        sh 'npm install -g cordova'
+        sh 'npm install -g @angular/cli'
+        sh 'ng add @ionic/cordova-builders --skip-confirmation'
+    }
+
+    stage('install ionic-cli') {
+        try { 
+            sh "npm uninstall -g ionic"
+            }
+        catch (e) {
+            echo 'No previous ionic cli installation' + e.toString()
+            //throw e
+            }
+            sh 'npm install -g @ionic/cli'   
+            sh 'ionic -v'
+    }
+
+    ////////////GRADLE/////////////////////
+
+    stage('Build APK') {
+        if(is_repush == 0 && build_debug == true ){
+            sh 'ionic cordova platform add android --confirm --no-interactive' // Dapat dijalankan di dalam project ionic
+            sh 'ionic cordova build android'
+        }
+        else {
+            echo 'SKIP Build APK'
+            Utils.markStageSkippedForConditional('Build APK')
+        }
+    }
+
+    stage('Build AAB') {
+        if(is_repush == 0 && build_debug == true ){
+            sh 'ionic cordova platform add android --confirm --no-interactive' // Dapat dijalankan di dalam project ionic
+            sh 'ionic cordova build android --prod --release'
+        }
+        else {
+            echo 'SKIP Build AAB'
+            Utils.markStageSkippedForConditional('Build AAB')
+        }
+    }
+
+    ////////////GRADLE/////////////////////
+
+    ////////////UPLOAD APK TO NEXUS ////////////
+    stage('Nexus') {
+        withCredentials([[$class: 'UsernamePasswordMultiBinding',
+            credentialsId: "${nexus_credentials_id}",
+            usernameVariable: 'nexus_username', passwordVariable: 'nexus_password']]) {
+                if(is_repush == 0 ){
+                    sh """
+                    echo 'Uploading apk templates onto repository...'
+                    curl --fail -u ${nexus_username}:${nexus_password} --upload-file .${file_apk_path}/${file_apk} $nexus_base_url/repository/${nexus_deploy}/kurlog-apk/${project_name}/exIonic-${file_apk} --create-dirs
+                    """
+
+                    sh """
+                    echo 'Uploading apk templates onto repository...'
+                    curl --fail -u ${nexus_username}:${nexus_password} --upload-file .${file_apk_path_aab}/${file_apk_aab} $nexus_base_url/repository/${nexus_deploy}/kurlog-apk/${project_name}/exIonic-${file_apk_aab} --create-dirs
+                    """
+
+                }
+                else
+                {
+                    def str2 = file_apk_path.substring(file_apk_path.indexOf('/') +1 , file_apk_path.length())
+                    sh """
+                        mkdir -p '${str2}'
+                        chmod -R 777 "\$(pwd)${file_apk_path}"
+                    """
+                    sh """
+                        echo 'Downloading dummy APK...'
+                        pwd
+                        curl --fail -u ${nexus_username}:${nexus_password} -o ${file_apk} ${nexus_base_url}/repository/${nexus_deploy}/apk/DEV-${file_apk}
+                        pwd
+                        echo 'Download Done'
+
+                        mv ${file_apk} .${file_apk_path}/${file_apk}
+
+                        chmod -R 777 "\$(pwd)${file_apk_path}"
+                        """
+                }
+        }
+    }
+    ////////////UPLOAD APK TO NEXUS ////////////
+
+}
